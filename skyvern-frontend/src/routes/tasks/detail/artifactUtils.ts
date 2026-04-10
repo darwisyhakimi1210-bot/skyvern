@@ -3,6 +3,10 @@ import { artifactApiBaseUrl } from "@/util/env";
 
 export function getImageURL(artifact: ArtifactApiResponse): string {
   if (artifact.signed_url) {
+    // If signed_url is a local file path (returned by local storage), proxy through artifact server
+    if (artifact.signed_url.startsWith("file://")) {
+      return `${artifactApiBaseUrl}/artifact/image?path=${artifact.signed_url.slice(7)}`;
+    }
     return artifact.signed_url;
   }
   if (artifact.uri.startsWith("file://")) {

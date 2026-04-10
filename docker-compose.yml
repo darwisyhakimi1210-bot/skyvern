@@ -134,7 +134,9 @@ services:
       timeout: 5s
       retries: 5
   skyvern-ui:
-    image: public.ecr.aws/skyvern/skyvern-ui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
     restart: on-failure
     ports:
       - 8080:8080

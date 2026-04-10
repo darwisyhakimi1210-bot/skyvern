@@ -31,6 +31,7 @@ import {
   Pencil2Icon,
   PlayIcon,
   ReloadIcon,
+  MobileIcon,
 } from "@radix-ui/react-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useSearchParams } from "react-router-dom";
@@ -80,6 +81,7 @@ function WorkflowRun() {
   const isFinalized = workflowRun ? statusIsFinalized(workflowRun) : null;
 
   const [hasPublishedCode, setHasPublishedCode] = useState(false);
+  const [mobileView, setMobileView] = useState(false);
 
   const [cacheKeyValue, setCacheKeyValue] = useState(
     cacheKey === ""
@@ -546,20 +548,30 @@ function WorkflowRun() {
       {!isEmbedded && (
         <div className="flex items-center justify-between">
           <SwitchBarNavigation options={switchBarOptions} />
-          {workflowRun && (
-            <WorkflowRunStatusAlert
-              status={workflowRun.status}
-              title={workflow?.title}
-              visible={workflowRun && !isFinalized}
-            />
-          )}
+          <div className="flex items-center gap-4">
+            {workflowRun && (
+              <WorkflowRunStatusAlert
+                status={workflowRun.status}
+                title={workflow?.title}
+                visible={workflowRun && !isFinalized}
+              />
+            )}
+            <Button
+              variant={mobileView ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMobileView(!mobileView)}
+            >
+              <MobileIcon className="mr-2 h-4 w-4" />
+              {mobileView ? "Mobile" : "Desktop"}
+            </Button>
+          </div>
         </div>
       )}
-      <div className="flex h-[42rem] gap-6">
-        <div className="w-2/3">
+      <div className={cn("flex gap-6", mobileView ? "h-[50rem]" : "h-[42rem]")}>
+        <div className={mobileView ? "w-full" : "w-2/3"}>
           <Outlet />
         </div>
-        <div className="w-1/3">
+        <div className={mobileView ? "hidden" : "w-1/3"}>
           <WorkflowRunTimeline
             activeItem={selection}
             onActionItemSelected={(item) => {
