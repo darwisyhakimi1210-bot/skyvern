@@ -35,6 +35,7 @@ class WorkflowRequestBody(BaseModel):
     browser_address: str | None = None
     run_with: str | None = None
     ai_fallback: bool | None = None
+    device_template: str | None = None
 
     @field_validator("webhook_callback_url", "totp_verification_url")
     @classmethod
@@ -186,6 +187,7 @@ class WorkflowRun(BaseModel):
     sequential_key: str | None = None
     ai_fallback: bool | None = None
     code_gen: bool | None = None
+    device_template: str | None = None
     trigger_type: WorkflowRunTriggerType | None = None
     workflow_schedule_id: str | None = None
 

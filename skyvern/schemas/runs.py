@@ -553,6 +553,12 @@ class WorkflowRunRequest(BaseModel):
         examples=["agent", "code"],
     )
 
+    device_template: str | None = Field(
+        default=None,
+        description="Device template to emulate for this workflow run. Sets the viewport size and user agent. Supported values: 'iPhone 14', 'Pixel 7', 'iPad Pro 11'.",
+        examples=["iPhone 14", "Pixel 7", "iPad Pro 11"],
+    )
+
     @field_validator("run_with", mode="before")
     @classmethod
     def _normalize_run_with(cls, v: str | None) -> str | None:

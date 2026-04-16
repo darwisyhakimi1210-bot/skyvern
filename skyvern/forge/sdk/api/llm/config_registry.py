@@ -1887,6 +1887,25 @@ if settings.ENABLE_OPENROUTER:
                 ),
             ),
         )
+    # Register secondary OpenRouter model for lightweight tasks
+    if settings.OPENROUTER_SECONDARY_MODEL:
+        openrouter_secondary_model_name = settings.OPENROUTER_SECONDARY_MODEL
+        LLMConfigRegistry.register_config(
+            "OPENROUTER_SECONDARY",
+            LLMConfig(
+                f"openrouter/{openrouter_secondary_model_name}",
+                ["OPENROUTER_API_KEY", "OPENROUTER_SECONDARY_MODEL"],
+                supports_vision=settings.LLM_CONFIG_SUPPORT_VISION,
+                add_assistant_prefix=False,
+                max_completion_tokens=settings.LLM_CONFIG_MAX_TOKENS,
+                litellm_params=LiteLLMParams(
+                    api_key=settings.OPENROUTER_API_KEY,
+                    api_base=settings.OPENROUTER_API_BASE,
+                    api_version=None,
+                    model_info={"model_name": f"openrouter/{openrouter_secondary_model_name}"},
+                ),
+            ),
+        )
 if settings.ENABLE_GROQ:
     # Register Groq model configured in settings
     if settings.GROQ_MODEL:

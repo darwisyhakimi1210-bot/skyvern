@@ -1,5 +1,6 @@
 import asyncio
 
+import structlog
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi.responses import ORJSONResponse
 
@@ -24,6 +25,8 @@ from skyvern.schemas.browser_sessions import (
     ProcessBrowserSessionRecordingResponse,
 )
 from skyvern.webeye.schemas import BrowserSessionResponse
+
+LOG = structlog.get_logger()
 
 
 @base_router.get(
@@ -148,6 +151,97 @@ async def close_browser_session(
     await app.PERSISTENT_SESSIONS_MANAGER.close_session(current_org.organization_id, browser_session_id)
     return ORJSONResponse(
         content={"message": "Browser session closed"},
+        status_code=200,
+        media_type="application/json",
+    )
+
+
+@base_router.post(
+    "/browser_sessions/{browser_session_id}/set_viewport",
+    tags=["Browser Sessions"],
+    description="Dynamically change the viewport size of a browser session without restarting it.",
+    summary="Set viewport size",
+    responses={
+        200: {"description": "Successfully updated viewport size"},
+        403: {"description": "Unauthorized - Invalid or missing authentication"},
+        404: {"description": "Browser session not found"},
+    },
+)
+@base_router.post(
+    "/browser_sessions/{browser_session_id}/set_viewport/",
+    include_in_schema=False,
+)
+async def set_browser_session_viewport(
+    browser_session_id: str = Path(
+        ...,
+        description="The ID of the browser session to change viewport. browser_session_id starts with `pbs_`",
+        examples=["pbs_123456"],
+    ),
+    width: int = Query(..., ge=1, description="Viewport width in pixels"),
+    height: int = Query(..., ge=1, description="Viewport height in pixels"),
+    user_agent: str | None = Query(None, description="Optional user agent string for mobile view"),
+    current_org: Organization = Depends(org_auth_service.get_current_org),
+) -> ORJSONResponse:
+    browser_state = await app.PERSISTENT_SESSIONS_MANAGER.get_browser_state(
+        browser_session_id, organization_id=current_org.organization_id
+    )
+    if not browser_state:
+        raise HTTPException(status_code=404, detail=f"Browser session {browser_session_id} not found")
+    await browser_state.set_viewport(width, height, user_agent)
+    return ORJSONResponse(
+        content={"message": "Viewport updated", "width": width, "height": height, "user_agent": user_agent},
+        status_code=200,
+        media_type="application/json",
+    )
+
+
+@base_router.post(
+    "/workflow_runs/{workflow_run_id}/set_viewport",
+    tags=["Browser Sessions"],
+    description="Dynamically change the viewport size of a browser for a workflow run without restarting it.",
+    summary="Set workflow run viewport size",
+    responses={
+        200: {"description": "Successfully updated viewport size"},
+        403: {"description": "Unauthorized - Invalid or missing authentication"},
+        404: {"description": "Workflow run or browser not found"},
+    },
+)
+@base_router.post(
+    "/workflow_runs/{workflow_run_id}/set_viewport/",
+    include_in_schema=False,
+)
+async def set_workflow_run_viewport(
+    workflow_run_id: str = Path(
+        ...,
+        description="The ID of the workflow run to change viewport",
+        examples=["wfr_123456"],
+    ),
+    width: int = Query(..., ge=1, description="Viewport width in pixels"),
+    height: int = Query(..., ge=1, description="Viewport height in pixels"),
+    user_agent: str | None = Query(None, description="Optional user agent string for mobile view"),
+    current_org: Organization = Depends(org_auth_service.get_current_org),
+) -> ORJSONResponse:
+    LOG.info("set_workflow_run_viewport called", workflow_run_id=workflow_run_id, width=width, height=height, user_agent=user_agent, org_id=current_org.organization_id)
+    workflow_run = await app.DATABASE.workflow_runs.get_workflow_run(
+        workflow_run_id=workflow_run_id,
+        organization_id=current_org.organization_id,
+    )
+    if not workflow_run:
+        LOG.warning("Workflow run not found", workflow_run_id=workflow_run_id, organization_id=current_org.organization_id)
+        raise HTTPException(status_code=404, detail=f"Workflow run {workflow_run_id} not found")
+    LOG.info("Workflow run found", workflow_run_id=workflow_run_id, browser_session_id=workflow_run.browser_session_id)
+    try:
+        browser_state = await app.BROWSER_MANAGER.get_or_create_for_workflow_run(
+            workflow_run=workflow_run,
+            browser_session_id=workflow_run.browser_session_id,
+            browser_profile_id=workflow_run.browser_profile_id,
+        )
+    except Exception as e:
+        LOG.error("Failed to get or create browser state", workflow_run_id=workflow_run_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to get or create browser state: {str(e)}")
+    await browser_state.set_viewport(width, height, user_agent)
+    return ORJSONResponse(
+        content={"message": "Viewport updated", "width": width, "height": height, "user_agent": user_agent},
         status_code=200,
         media_type="application/json",
     )

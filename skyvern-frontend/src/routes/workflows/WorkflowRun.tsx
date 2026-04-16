@@ -159,6 +159,7 @@ function WorkflowRun() {
     workflowRunId: workflowRun?.workflow_run_id,
     enabled: workflowRunIsFinalized === true,
   });
+
   const finallyBlockLabel =
     workflow?.workflow_definition?.finally_block_label ?? null;
   const selection = findActiveItem(
@@ -555,11 +556,11 @@ function WorkflowRun() {
           )}
         </div>
       )}
-      <div className="flex h-[42rem] gap-6">
-        <div className="min-w-0 flex-[2]">
+      <div className="flex h-[45rem] gap-6">
+        <div className="w-2/3">
           <Outlet />
         </div>
-        <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="w-1/3">
           <WorkflowRunTimeline
             activeItem={selection}
             onActionItemSelected={(item) => {

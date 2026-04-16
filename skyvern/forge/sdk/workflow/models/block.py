@@ -398,6 +398,7 @@ class Block(BaseModel, abc.ABC):
                     extra_http_headers=workflow_run.extra_http_headers,
                     browser_address=workflow_run.browser_address,
                     browser_profile_id=workflow_run.browser_profile_id,
+                    device_template=workflow_run.device_template,
                 )
             except Exception:
                 LOG.exception(

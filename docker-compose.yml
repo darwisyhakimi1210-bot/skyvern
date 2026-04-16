@@ -34,8 +34,8 @@ services:
       - ./log:/data/log
       - ./.streamlit:/app/.streamlit
       # Uncomment the following two lines if you want to connect to any local changes
-      # - ./skyvern:/app/skyvern
-      # - ./alembic:/app/alembic
+      - ./skyvern:/app/skyvern
+      - ./alembic:/app/alembic
     environment:
       - DATABASE_STRING=postgresql+psycopg://skyvern:skyvern@postgres:5432/skyvern
       - BROWSER_TYPE=chromium-headful
@@ -134,7 +134,9 @@ services:
       timeout: 5s
       retries: 5
   skyvern-ui:
-    image: public.ecr.aws/skyvern/skyvern-ui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
     restart: on-failure
     ports:
       - 8080:8080

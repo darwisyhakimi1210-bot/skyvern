@@ -7,7 +7,7 @@ from typing import Literal
 from urllib.parse import urlparse
 
 import structlog
-from playwright.async_api import BrowserContext, Page, Playwright
+from playwright.async_api import BrowserContext, CDPSession, Page, Playwright
 
 from skyvern.config import settings
 from skyvern.constants import BROWSER_CLOSE_TIMEOUT, BROWSER_PAGE_CLOSE_TIMEOUT, NAVIGATION_MAX_RETRY_TIME
@@ -83,6 +83,7 @@ class RealBrowserState(BrowserState):
         extra_http_headers: dict[str, str] | None = None,
         browser_address: str | None = None,
         browser_profile_id: str | None = None,
+        device_template: str | None = None,
     ) -> None:
         if self.browser_context is None:
             LOG.info("creating browser context")
@@ -102,6 +103,7 @@ class RealBrowserState(BrowserState):
                 extra_http_headers=extra_http_headers,
                 browser_address=browser_address,
                 browser_profile_id=browser_profile_id,
+                device_template=device_template,
             )
             self.browser_context = browser_context
             self.browser_artifacts = browser_artifacts
@@ -232,6 +234,25 @@ class RealBrowserState(BrowserState):
         if page is None:
             raise MissingBrowserStatePage()
         return page
+
+    async def set_viewport(
+        self, width: int, height: int, user_agent: str | None = None
+    ) -> None:
+        """Set viewport size dynamically without restarting browser."""
+        page = await self.must_get_working_page()
+        await page.set_viewport_size({"width": width, "height": height})
+        LOG.info("Viewport changed", width=width, height=height)
+
+        if user_agent:
+            # Use CDP to set user agent override so websites serve mobile content
+            cdp_session: CDPSession = await page.context.new_cdp_session(page)
+            try:
+                await cdp_session.send("Emulation.setUserAgentOverride", {
+                    "userAgent": user_agent,
+                })
+                LOG.info("User agent changed", user_agent=user_agent)
+            finally:
+                await cdp_session.detach()
 
     async def set_working_page(self, page: Page | None, index: int = 0) -> None:
         self.__page = page

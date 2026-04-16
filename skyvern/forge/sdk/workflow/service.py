@@ -696,6 +696,7 @@ class WorkflowService:
             ai_fallback=workflow_request.ai_fallback,
             run_with=workflow_request.run_with,
             code_gen=code_gen,
+            device_template=workflow_request.device_template if hasattr(workflow_request, "device_template") else None,
         )
         context: skyvern_context.SkyvernContext | None = skyvern_context.current()
         current_run_id = context.run_id if context and context.run_id else workflow_run.workflow_run_id
@@ -3775,6 +3776,7 @@ class WorkflowService:
             debug_session_id=debug_session_id,
             ai_fallback=workflow_request.ai_fallback,
             code_gen=code_gen,
+            device_template=workflow_request.device_template if hasattr(workflow_request, "device_template") else None,
             workflow_run_id=workflow_run_id,
             trigger_type=trigger_type,
             workflow_schedule_id=workflow_schedule_id,
