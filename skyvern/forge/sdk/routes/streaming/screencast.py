@@ -149,6 +149,11 @@ async def start_screencast_loop(
         if page is None:
             raise RuntimeError("No working page available for screencast")
 
+        # Get actual viewport dimensions for mobile view
+        viewport = page.viewport_size
+        screencast_width = viewport["width"] if viewport and viewport.get("width") else DEFAULT_WIDTH
+        screencast_height = viewport["height"] if viewport and viewport.get("height") else DEFAULT_HEIGHT
+
         cdp_session = await page.context.new_cdp_session(page)
         cdp_session.on("Page.screencastFrame", _on_frame)
         await cdp_session.send(
@@ -156,8 +161,8 @@ async def start_screencast_loop(
             {
                 "format": "jpeg",
                 "quality": 60,
-                "maxWidth": DEFAULT_WIDTH,
-                "maxHeight": DEFAULT_HEIGHT,
+                "maxWidth": screencast_width,
+                "maxHeight": screencast_height,
             },
         )
         LOG.info("CDP screencast started", entity_id=entity_id, entity_type=entity_type)

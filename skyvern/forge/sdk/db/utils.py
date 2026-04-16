@@ -483,6 +483,7 @@ def convert_to_workflow_run(
         run_with=workflow_run_model.run_with,
         code_gen=workflow_run_model.code_gen,
         ai_fallback=workflow_run_model.ai_fallback,
+        device_template=workflow_run_model.device_template,
         trigger_type=_safe_trigger_type(workflow_run_model.trigger_type),
         workflow_schedule_id=workflow_run_model.workflow_schedule_id,
         failure_category=workflow_run_model.failure_category,

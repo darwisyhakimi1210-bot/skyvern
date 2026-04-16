@@ -13,6 +13,7 @@ import { z } from "zod";
 import { getClient } from "@/api/AxiosClient";
 import { ProxyLocation } from "@/api/types";
 import { ProxySelector } from "@/components/ProxySelector";
+import { DeviceTemplateSelector } from "@/components/DeviceTemplateSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -192,6 +193,7 @@ type RunWorkflowRequestBody = {
   browser_address?: string | null;
   run_with?: "agent" | "code";
   ai_fallback?: boolean;
+  device_template?: string | null;
 };
 
 function getRunWorkflowRequestBody(
@@ -207,6 +209,7 @@ function getRunWorkflowRequestBody(
     extraHttpHeaders,
     runWith,
     aiFallback,
+    deviceTemplate,
     ...parameters
   } = values;
 
@@ -224,6 +227,8 @@ function getRunWorkflowRequestBody(
     browser_address: cdpAddress,
     run_with: runWith,
     ai_fallback: aiFallback ?? true,
+    device_template:
+      deviceTemplate && deviceTemplate !== "Desktop" ? deviceTemplate : null,
   };
 
   if (maxScreenshotScrolls) {
@@ -278,6 +283,7 @@ function deriveRunWith(
   return "agent";
 }
 
+
 type RunWorkflowFormType = Record<string, unknown> & {
   webhookCallbackUrl: string;
   proxyLocation: ProxyLocation;
@@ -287,6 +293,7 @@ type RunWorkflowFormType = Record<string, unknown> & {
   extraHttpHeaders: string | null;
   runWith: "agent" | "code";
   aiFallback: boolean | null;
+  deviceTemplate: string | null;
 };
 
 function RunWorkflowForm({
@@ -323,6 +330,7 @@ function RunWorkflowForm({
         : null,
       runWith: deriveRunWith(workflow, initialSettings.runWith),
       aiFallback: workflow?.ai_fallback ?? true,
+      deviceTemplate: null,
     },
   });
 
@@ -456,6 +464,7 @@ function RunWorkflowForm({
       cdpAddress,
       runWith,
       aiFallback,
+      deviceTemplate,
       ...parameters
     } = values;
 
@@ -473,6 +482,7 @@ function RunWorkflowForm({
       cdpAddress,
       runWith,
       aiFallback,
+      deviceTemplate,
     });
   }
 
@@ -485,6 +495,7 @@ function RunWorkflowForm({
       "extraHttpHeaders",
       "cdpAddress",
       "runWith",
+      "deviceTemplate",
     ]);
 
     const parsedParameters = parseValuesForWorkflowRun(
@@ -851,6 +862,43 @@ function RunWorkflowForm({
                           className="w-48"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </div>
+                  </div>
+                </FormItem>
+              );
+            }}
+          />
+          <FormField
+            key="deviceTemplate"
+            control={form.control}
+            name="deviceTemplate"
+            render={({ field }) => {
+              return (
+                <FormItem>
+                  <div className="flex gap-16">
+                    <FormLabel>
+                      <div className="w-72">
+                        <div className="flex items-center gap-2 text-lg">
+                          Device
+                        </div>
+                        <h2 className="text-sm text-slate-400">
+                          Emulate a device by setting its viewport and user
+                          agent.
+                        </h2>
+                      </div>
+                    </FormLabel>
+                    <div className="w-full space-y-2">
+                      <FormControl>
+                        <DeviceTemplateSelector
+                          value={field.value as string | null}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-slate-400">
+                        💡 Optional — select a device if the site behaves
+                        differently on mobile or tablet.
+                      </p>
                       <FormMessage />
                     </div>
                   </div>

@@ -420,6 +420,7 @@ class WorkflowRunModel(Base):
     workflow_schedule_id = Column(String, nullable=True, index=True)
     ai_fallback = Column(Boolean, nullable=True)
     code_gen = Column(Boolean, nullable=True)
+    device_template = Column(String, nullable=True)
     waiting_for_verification_code = Column(Boolean, nullable=False, default=False, server_default=sqlalchemy.false())
     verification_code_identifier = Column(String, nullable=True)
     verification_code_polling_started_at = Column(DateTime, nullable=True)

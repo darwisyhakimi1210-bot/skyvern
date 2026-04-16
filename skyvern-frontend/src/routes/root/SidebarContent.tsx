@@ -6,6 +6,7 @@ import { SideNav } from "./SideNav";
 import { cn } from "@/util/utils";
 import { Button } from "@/components/ui/button";
 import { ChevronLeftIcon, ChevronRightIcon } from "@radix-ui/react-icons";
+import { ThemeToggle } from "@/components/ThemeSwitch";
 
 type Props = {
   useCollapsedState?: boolean;
@@ -24,11 +25,12 @@ function SidebarContent({ useCollapsedState }: Props) {
       </Link>
       <SideNav />
       <div
-        className={cn("mt-auto flex min-h-16", {
-          "justify-center": collapsed,
-          "justify-end": !collapsed,
+        className={cn("mt-auto flex min-h-16 items-center", {
+          "flex-col justify-center gap-2": collapsed,
+          "justify-between": !collapsed,
         })}
       >
+        <ThemeToggle />
         <Button
           size="icon"
           variant="ghost"

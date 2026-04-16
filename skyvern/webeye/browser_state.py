@@ -30,6 +30,7 @@ class BrowserState(Protocol):
         extra_http_headers: dict[str, str] | None = None,
         browser_address: str | None = None,
         browser_profile_id: str | None = None,
+        device_template: str | None = None,
     ) -> None: ...
 
     async def get_working_page(self) -> Page | None: ...
@@ -93,3 +94,9 @@ class BrowserState(Protocol):
         wait_seconds: float = 0,
         must_included_tags: list[str] | None = None,
     ) -> ScrapedPage: ...
+
+    async def set_viewport(
+        self, width: int, height: int, user_agent: str | None = None
+    ) -> None:
+        """Set viewport size dynamically without restarting browser."""
+        ...
