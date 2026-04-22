@@ -106,7 +106,7 @@ function BrowserSessions() {
     browserType: BrowserSessionType | null;
     extensions: BrowserSessionExtension[];
   }>({
-    proxyLocation: ProxyLocation.Residential,
+    proxyLocation: ProxyLocation.None,
     timeoutMinutes: 60,
     browserType: null,
     extensions: [],

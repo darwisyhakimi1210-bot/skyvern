@@ -703,10 +703,10 @@ async def handle_solve_captcha_action(
     step: Step,
 ) -> list[ActionResult]:
     LOG.warning(
-        "Please solve the captcha on the page, you have 30 seconds",
+        "Please solve the captcha on the page, you have 15 seconds",
         action=action,
     )
-    await asyncio.sleep(30)
+    await asyncio.sleep(15)
     return [ActionSuccess()]
 
 
@@ -1652,8 +1652,8 @@ async def handle_upload_file_action(
                 timeout=settings.BROWSER_ACTION_TIMEOUT_MS,
             )
 
-            # Sleep for 10 seconds after uploading a file to let the page process it
-            await asyncio.sleep(10)
+            # Sleep for 5 seconds after uploading a file to let the page process it
+            await asyncio.sleep(5)
 
             return [ActionSuccess()]
         else:
@@ -2711,10 +2711,10 @@ async def chain_click(
         LOG.info("Remove file chooser listener", action=action)
 
         # FIXME: use 'page.wait_for_event("filechooser", timeout)' to wait for the file to be uploaded instead of hardcoding sleeping time
-        # Sleep for 15 seconds after uploading a file to let the page process it
+        # Sleep for 8 seconds after uploading a file to let the page process it
         # Removing this breaks file uploads using the filechooser
         if file:
-            await asyncio.sleep(15)
+            await asyncio.sleep(8)
         page.remove_listener("filechooser", fc_func)
 
         if action.file_url and not is_filechooser_trigger:

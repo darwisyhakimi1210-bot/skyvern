@@ -383,6 +383,21 @@ class DefaultPersistentSessionsManager(PersistentSessionsManager):
             runnable_id=runnable_id,
             organization_id=organization_id,
         )
+        # OSS: VNC streaming requires browser_address + ip_address to be set so
+        # /stream/vnc/workflow_run/* can resolve the VNC URL. In OSS all browsers
+        # run in-process and the VNC server (websockify) listens on localhost:6080
+        # inside the skyvern container, so both fields point at localhost.
+        existing = await self.database.browser_sessions.get_persistent_browser_session(
+            session_id, organization_id
+        )
+        if existing and not existing.browser_address:
+            await self.database.browser_sessions.set_persistent_browser_session_browser_address(
+                browser_session_id=session_id,
+                browser_address=f"http://localhost:9222/{session_id}",
+                ip_address="localhost",
+                ecs_task_arn=None,
+                organization_id=organization_id,
+            )
 
     async def renew_or_close_session(self, session_id: str, organization_id: str) -> PersistentBrowserSession:
         try:

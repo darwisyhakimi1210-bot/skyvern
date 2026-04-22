@@ -381,7 +381,7 @@ function WorkflowPostRunParameters() {
               <h1 className="text-lg">Proxy Location</h1>
             </div>
             <ProxySelector
-              value={proxyLocation ?? ProxyLocation.Residential}
+              value={proxyLocation ?? ProxyLocation.None}
               onChange={() => {
                 // TODO
               }}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "skyvern": {
+      "type": "http",
+      "url": "https://api.skyvern.com/mcp/",
+      "headers": {
+        "x-api-key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQ5MjA3MTQ2MDksInN1YiI6Im9fNTE1NzAyNzc4NzA2NTc2MDE0In0.77DiYnAFs0-SxSsc5Fcc6WqD_COSrAs3vB36b0yGayw"
+      }
+    }
+  }
+}

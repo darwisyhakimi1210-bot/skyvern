@@ -126,7 +126,7 @@ function StartNode({ id, data, parentId }: NodeProps<StartNode>) {
         : "",
       proxyLocation: data.withWorkflowSettings
         ? data.proxyLocation
-        : ProxyLocation.Residential,
+        : ProxyLocation.None,
       persistBrowserSession: data.withWorkflowSettings
         ? data.persistBrowserSession
         : false,

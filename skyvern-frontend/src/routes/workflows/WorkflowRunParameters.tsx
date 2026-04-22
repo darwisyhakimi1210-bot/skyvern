@@ -71,7 +71,7 @@ function WorkflowRunParameters() {
       workflowParameters={workflowParameters}
       initialSettings={{
         proxyLocation:
-          proxyLocation ?? workflow.proxy_location ?? ProxyLocation.Residential,
+          proxyLocation ?? workflow.proxy_location ?? ProxyLocation.None,
         webhookCallbackUrl:
           webhookCallbackUrl ?? workflow.webhook_callback_url ?? "",
         maxScreenshotScrolls:

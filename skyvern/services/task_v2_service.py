@@ -75,7 +75,7 @@ DEFAULT_WORKFLOW_TITLE = "New Workflow"
 RANDOM_STRING_POOL = string.ascii_letters + string.digits
 # Maximum number of planning iterations for TaskV2
 # This limits how many times the LLM can plan and execute actions
-DEFAULT_MAX_ITERATIONS = 50
+DEFAULT_MAX_ITERATIONS = 15
 
 MINI_GOAL_TEMPLATE = """Achieve the following mini goal and once it's achieved, complete:
 ```{mini_goal}```

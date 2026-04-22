@@ -6,6 +6,7 @@ import os
 import random
 import re
 import string
+import time
 import uuid
 from asyncio.exceptions import CancelledError
 from dataclasses import dataclass
@@ -1111,6 +1112,9 @@ class ForgeAgent:
                 step_order=step.order,
                 step_retry=step.retry_index,
             )
+            _phase_t_start = time.perf_counter()
+            _phase_t_scrape_end: float | None = None
+            _phase_t_llm_end: float | None = None
 
             # Update context with step_id for auto action/screenshot creation
             context = skyvern_context.current()
@@ -1159,6 +1163,7 @@ class ForgeAgent:
 
             detailed_agent_step_output.scraped_page = scraped_page
             detailed_agent_step_output.extract_action_prompt = extract_action_prompt
+            _phase_t_scrape_end = time.perf_counter()
             actions: list[Action]
 
             # If prepare_step_execution injected actions (e.g. proactive captcha solving),
@@ -1348,6 +1353,7 @@ class ForgeAgent:
                         speculative_llm_metadata = None
 
             detailed_agent_step_output.actions = actions
+            _phase_t_llm_end = time.perf_counter()
             if len(actions) == 0:
                 LOG.info(
                     "No actions to execute, marking step as failed",
@@ -1691,6 +1697,33 @@ class ForgeAgent:
                 await app.AGENT_FUNCTION.post_action_execution(extract_action)
                 detailed_agent_step_output.actions_and_results.append((extract_action, extract_results))
 
+            _phase_t_exec_end = time.perf_counter()
+            _phase_scrape_s = round((_phase_t_scrape_end or _phase_t_exec_end) - _phase_t_start, 3)
+            _phase_llm_s = round(
+                (_phase_t_llm_end or _phase_t_exec_end) - (_phase_t_scrape_end or _phase_t_start),
+                3,
+            )
+            _phase_actions_s = round(_phase_t_exec_end - (_phase_t_llm_end or _phase_t_exec_end), 3)
+            _phase_total_s = round(_phase_t_exec_end - _phase_t_start, 3)
+            LOG.info(
+                "Step phase timing",
+                scrape_prompt_s=_phase_scrape_s,
+                llm_s=_phase_llm_s,
+                actions_s=_phase_actions_s,
+                total_s=_phase_total_s,
+                num_actions=len(actions),
+                step_order=step.order,
+            )
+            try:
+                with open("profile.log", "a", encoding="utf-8") as _pf:
+                    _pf.write(
+                        f"{datetime.now(UTC).isoformat()} task={task.task_id} step={step.step_id} "
+                        f"order={step.order} scrape={_phase_scrape_s}s llm={_phase_llm_s}s "
+                        f"actions={_phase_actions_s}s total={_phase_total_s}s "
+                        f"num_actions={len(actions)}\n"
+                    )
+            except Exception:
+                pass
             # If no action errors return the agent state and output
             completed_step = await self.update_step(
                 step=step,

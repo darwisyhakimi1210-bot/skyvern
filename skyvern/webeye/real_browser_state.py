@@ -29,8 +29,8 @@ from skyvern.webeye.utils.page import ScreenshotMode, SkyvernFrame
 
 LOG = structlog.get_logger()
 
-SETTLE_TIME_MS = 750
-SETTLE_JITTER_MS = 500
+SETTLE_TIME_MS = 300
+SETTLE_JITTER_MS = 100
 
 
 class RealBrowserState(BrowserState):

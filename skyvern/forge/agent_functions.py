@@ -35,6 +35,12 @@ SVG_SHAPE_CONVERTION_ATTEMPTS = 3
 CSS_SHAPE_CONVERTION_ATTEMPTS = 1
 INVALID_SHAPE = "N/A"
 
+# Attributes that don't change an SVG's semantic shape. Stripping them before hashing means
+# visually-identical icons with different styling/wrapping hash to the same cache key.
+_NON_SEMANTIC_SVG_ATTRIBUTES = frozenset(
+    {"class", "style", "tabindex", "role", "focusable", "aria-hidden", "width", "height"}
+)
+
 
 def _remove_rect(element: dict) -> None:
     if "rect" in element:
@@ -80,6 +86,48 @@ def _get_svg_cache_key(hash: str) -> str:
 
 def _get_shape_cache_key(hash: str) -> str:
     return f"skyvern:shape:{hash}"
+
+
+def _get_svg_accessible_label(element: Dict) -> str | None:
+    """Return a human-readable label from aria-label or a <title> child, or None.
+
+    Avoids the secondary LLM entirely for properly-labeled SVGs (icon libraries like Material,
+    FontAwesome, and Heroicons almost always include one of these).
+    """
+    attributes = element.get("attributes") or {}
+    aria_label = attributes.get("aria-label")
+    if isinstance(aria_label, str) and aria_label.strip():
+        return aria_label.strip()
+
+    for child in element.get("children") or []:
+        if child.get("tagName") == "title":
+            text = child.get("text")
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+    return None
+
+
+def _strip_non_semantic_attrs(element: Dict) -> None:
+    attributes = element.get("attributes")
+    if isinstance(attributes, dict):
+        for key in list(attributes.keys()):
+            if key in _NON_SEMANTIC_SVG_ATTRIBUTES or key.startswith("data-"):
+                del attributes[key]
+        # Sort attributes so dict iteration order doesn't produce different hashes for
+        # otherwise-identical elements.
+        element["attributes"] = dict(sorted(attributes.items()))
+
+    children = element.get("children")
+    if isinstance(children, list):
+        for child in children:
+            _strip_non_semantic_attrs(child)
+
+
+def _normalize_svg_for_hashing(element: Dict) -> Dict:
+    """Deep-copy the element with cosmetic attributes stripped so visually-identical SVGs share a cache key."""
+    normalized = copy.deepcopy(element)
+    _strip_non_semantic_attrs(normalized)
+    return normalized
 
 
 def _remove_skyvern_attributes(element: Dict) -> Dict:
@@ -182,10 +230,25 @@ async def _convert_svg_to_string(
     """Convert an SVG element to a string description. Assumes element has already passed eligibility checks."""
     element_id = element.get("id", "")
 
+    # Fast-path: trust author-provided labels (aria-label / <title>) and skip the LLM entirely.
+    accessible_label = _get_svg_accessible_label(element)
+    if accessible_label:
+        LOG.debug(
+            "SVG resolved from accessible label, skipping LLM",
+            element_id=element_id,
+            shape=accessible_label,
+        )
+        element["attributes"] = {"alt": accessible_label}
+        if "children" in element:
+            del element["children"]
+        return
+
     svg_element = _remove_skyvern_attributes(element)
+    # Hash on a normalized copy so visually-identical icons with different styling share a cache key.
+    svg_html_for_hash = json_to_html(_normalize_svg_for_hashing(svg_element))
     svg_html = json_to_html(svg_element)
     hash_object = hashlib.sha256()
-    hash_object.update(svg_html.encode("utf-8"))
+    hash_object.update(svg_html_for_hash.encode("utf-8"))
     svg_hash = hash_object.hexdigest()
     svg_key = _get_svg_cache_key(svg_hash)
 
@@ -247,7 +310,7 @@ async def _convert_svg_to_string(
                 if retry == SVG_SHAPE_CONVERTION_ATTEMPTS - 1:
                     # set the invalid css shape to cache to avoid retry in the near future
                     await app.CACHE.set(svg_key, INVALID_SHAPE, ex=timedelta(hours=1))
-                await asyncio.sleep(3)
+                await asyncio.sleep(0.5)
             except asyncio.TimeoutError:
                 LOG.warning(
                     "Timeout to call LLM to parse SVG. Going to drop the svg element directly.",
@@ -266,7 +329,7 @@ async def _convert_svg_to_string(
                 if retry == SVG_SHAPE_CONVERTION_ATTEMPTS - 1:
                     # set the invalid css shape to cache to avoid retry in the near future
                     await app.CACHE.set(svg_key, INVALID_SHAPE, ex=timedelta(weeks=1))
-                await asyncio.sleep(3)
+                await asyncio.sleep(0.5)
         else:
             LOG.warning(
                 "Reaching the max try to convert svg element, going to drop the svg element.",
@@ -382,7 +445,7 @@ async def _convert_css_shape_to_string(
                     if retry == CSS_SHAPE_CONVERTION_ATTEMPTS - 1:
                         # set the invalid css shape to cache to avoid retry in the near future
                         await app.CACHE.set(shape_key, INVALID_SHAPE, ex=timedelta(hours=1))
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(0.5)
                 except asyncio.TimeoutError:
                     LOG.warning(
                         "Timeout to call LLM to parse css shape. Going to abort the convertion directly.",
@@ -402,7 +465,7 @@ async def _convert_css_shape_to_string(
                     if retry == CSS_SHAPE_CONVERTION_ATTEMPTS - 1:
                         # set the invalid css shape to cache to avoid retry in the near future
                         await app.CACHE.set(shape_key, INVALID_SHAPE, ex=timedelta(weeks=1))
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(0.5)
             else:
                 LOG.info(
                     "Max css shape convertion retry, going to abort the convertion.",

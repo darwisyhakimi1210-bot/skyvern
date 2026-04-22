@@ -196,6 +196,30 @@ def initialize_download_dir() -> str:
     )
 
 
+async def _apply_device_emulation_to_page(page: Page, preset: dict[str, Any]) -> None:
+    """Apply a Playwright device preset to a single CDP-connected page via the Emulation domain.
+
+    Used when a browser context is reused (not freshly created) and therefore can't receive
+    emulation via browser.new_context(**preset) — the per-page CDP Emulation overrides are
+    the only way to make is_mobile / has_touch / UA stick on an already-live page.
+    """
+    viewport = preset.get("viewport") or {}
+    cdp = await page.context.new_cdp_session(page)
+    await cdp.send(
+        "Emulation.setDeviceMetricsOverride",
+        {
+            "width": int(viewport.get("width", 0)),
+            "height": int(viewport.get("height", 0)),
+            "deviceScaleFactor": float(preset.get("device_scale_factor", 1)),
+            "mobile": bool(preset.get("is_mobile")),
+        },
+    )
+    user_agent = preset.get("user_agent")
+    if user_agent:
+        await cdp.send("Emulation.setUserAgentOverride", {"userAgent": user_agent})
+    await cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": bool(preset.get("has_touch"))})
+
+
 async def _apply_download_behaviour(browser: Browser) -> None:
     context = ensure_context()
     download_dir = get_download_dir(
@@ -319,9 +343,24 @@ class BrowserContextFactory:
 
         if device_template and playwright and device_template in playwright.devices:
             preset = playwright.devices[device_template]
+            # --start-maximized forces the window to screen size and overrides the viewport,
+            # which silently defeats mobile emulation. --kiosk-printing is desktop-only noise.
+            incompatible_flags = {"--start-maximized", "--kiosk-printing"}
+            args["args"] = [flag for flag in browser_args if flag not in incompatible_flags]
             args["viewport"] = preset["viewport"]
             args["user_agent"] = preset["user_agent"]
-            LOG.info("Applying device template", device_template=device_template, viewport=preset["viewport"])
+            # Mobile sites sniff touch support and devicePixelRatio, not just user-agent.
+            for optional_key in ("is_mobile", "has_touch", "device_scale_factor"):
+                if optional_key in preset:
+                    args[optional_key] = preset[optional_key]
+            LOG.info(
+                "Applying device template",
+                device_template=device_template,
+                viewport=preset["viewport"],
+                is_mobile=preset.get("is_mobile"),
+                has_touch=preset.get("has_touch"),
+                device_scale_factor=preset.get("device_scale_factor"),
+            )
 
         return args
 
@@ -527,6 +566,7 @@ async def _create_headless_chromium(
             remote_browser_url=str(browser_address),
             extra_http_headers=extra_http_headers,
             apply_download_behaviour=True,
+            device_template=cast(str | None, kwargs.get("device_template")),
         )
 
     # Check for browser_profile_id and load from storage if available
@@ -621,6 +661,7 @@ async def _create_headful_chromium(
             remote_browser_url=str(browser_address),
             extra_http_headers=extra_http_headers,
             apply_download_behaviour=True,
+            device_template=cast(str | None, kwargs.get("device_template")),
         )
 
     # Check for browser_profile_id and load from storage if available
@@ -800,11 +841,14 @@ async def _connect_to_cdp_browser(
     remote_browser_url: str,
     extra_http_headers: dict[str, str] | None = None,
     apply_download_behaviour: bool = False,
+    device_template: str | None = None,
 ) -> tuple[BrowserContext, BrowserArtifacts, BrowserCleanupFunc]:
     parsed_headers = parse_extra_headers(extra_http_headers)
 
     browser_args = BrowserContextFactory.build_browser_args(
-        extra_http_headers=parsed_headers.headers if parsed_headers.headers else None
+        extra_http_headers=parsed_headers.headers if parsed_headers.headers else None,
+        device_template=device_template,
+        playwright=playwright,
     )
 
     browser_artifacts = BrowserContextFactory.build_browser_artifacts(
@@ -817,6 +861,10 @@ async def _connect_to_cdp_browser(
     if apply_download_behaviour:
         await _apply_download_behaviour(browser)
 
+    device_preset: dict[str, Any] | None = None
+    if device_template and device_template in playwright.devices:
+        device_preset = dict(playwright.devices[device_template])
+
     # Decide whether to create fresh context or reuse existing one
     contexts = browser.contexts
     browser_context = None
@@ -827,14 +875,48 @@ async def _connect_to_cdp_browser(
             fresh_context_requested=parsed_headers.use_fresh_context,
             existing_contexts=len(contexts),
         )
-        browser_context = await browser.new_context(
-            record_video_dir=browser_args["record_video_dir"],
-            viewport=browser_args["viewport"],
-            extra_http_headers=browser_args["extra_http_headers"],
-        )
+        new_context_kwargs: dict[str, Any] = {
+            "record_video_dir": browser_args["record_video_dir"],
+            "viewport": browser_args["viewport"],
+            "extra_http_headers": browser_args["extra_http_headers"],
+        }
+        if device_preset:
+            # new_context() accepts the same emulation fields as launch_persistent_context,
+            # so we can hand Playwright the preset wholesale for fresh contexts.
+            new_context_kwargs["user_agent"] = device_preset.get("user_agent")
+            for key in ("is_mobile", "has_touch", "device_scale_factor"):
+                if key in device_preset:
+                    new_context_kwargs[key] = device_preset[key]
+        browser_context = await browser.new_context(**new_context_kwargs)
     else:
         LOG.info("Reusing existing browser context", existing_contexts=len(contexts))
         browser_context = contexts[0]
+        if device_preset:
+            # Reused context can't be re-initialized, so emulate on every live page via CDP
+            # and hook new pages so late-spawned tabs inherit the same emulation.
+            for existing_page in browser_context.pages:
+                try:
+                    await _apply_device_emulation_to_page(existing_page, device_preset)
+                except Exception:
+                    LOG.warning(
+                        "Failed to apply device emulation to reused page",
+                        page_url=existing_page.url,
+                        device_template=device_template,
+                        exc_info=True,
+                    )
+
+            async def _emulate_on_new_page(page: Page) -> None:
+                try:
+                    await _apply_device_emulation_to_page(page, device_preset)
+                except Exception:
+                    LOG.warning(
+                        "Failed to apply device emulation to new page",
+                        page_url=page.url,
+                        device_template=device_template,
+                        exc_info=True,
+                    )
+
+            browser_context.on("page", lambda page: asyncio.ensure_future(_emulate_on_new_page(page)))
 
     # Enable CDPDownloadInterceptor when enable_download is set.
     # This captures downloads via the Fetch domain and saves them locally.

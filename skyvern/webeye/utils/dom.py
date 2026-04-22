@@ -745,7 +745,7 @@ class SkyvernElement:
                 element_id=self.get_id(),
             )
             wait_config = await get_or_create_wait_config(task_id, workflow_run_id, organization_id)
-            await asyncio.sleep(get_wait_time(wait_config, "checkbox_retry_delay", default=2.0))
+            await asyncio.sleep(get_wait_time(wait_config, "checkbox_retry_delay", default=0.5))
             if await self.get_locator().count() == 0:
                 LOG.info("Element is not on the page, the checking should work", element_id=self.get_id())
                 return
@@ -769,7 +769,7 @@ class SkyvernElement:
                 element_id=self.get_id(),
             )
             wait_config = await get_or_create_wait_config(task_id, workflow_run_id, organization_id)
-            await asyncio.sleep(get_wait_time(wait_config, "checkbox_retry_delay", default=2.0))
+            await asyncio.sleep(get_wait_time(wait_config, "checkbox_retry_delay", default=0.5))
             if await self.get_locator().count() == 0:
                 LOG.info("Element is not on the page, the unchecking should work", element_id=self.get_id())
                 return

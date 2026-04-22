@@ -237,9 +237,7 @@ async def new_debug_session(
         organization_id=current_org.organization_id,
         user_id=current_user_id,
         workflow_permanent_id=workflow_permanent_id,
-        vnc_streaming_supported=True if new_browser_session.ip_address else False,
-        # NOTE(jdo:streaming-local-dev)
-        # vnc_streaming_supported=True,
+        vnc_streaming_supported=True,
     )
 
     LOG.info(

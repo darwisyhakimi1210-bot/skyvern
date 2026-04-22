@@ -272,7 +272,7 @@ function DebuggerPostRunParameters() {
               <HelpTooltip content="The proxy location for the workflow." />
             </div>
             <ProxySelector
-              value={proxyLocation ?? ProxyLocation.Residential}
+              value={proxyLocation ?? ProxyLocation.None}
               onChange={() => {
                 // TODO
               }}

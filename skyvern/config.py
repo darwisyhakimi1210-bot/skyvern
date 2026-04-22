@@ -77,17 +77,17 @@ class Settings(BaseSettings):
     CACHED_ACTION_DELAY_SECONDS: float = 1.0
     # Page readiness settings for cached action execution
     # These help prevent cached actions from executing before the page is fully loaded
-    PAGE_READY_NETWORK_IDLE_TIMEOUT_MS: float = 3000  # Wait for network idle (short timeout)
-    PAGE_READY_LOADING_INDICATOR_TIMEOUT_MS: float = 5000  # Wait for loading indicators to disappear
-    PAGE_READY_DOM_STABLE_MS: float = 300  # Time with no DOM mutations to consider stable
-    PAGE_READY_DOM_STABILITY_TIMEOUT_MS: float = 3000  # Max time to wait for DOM stability
-    BROWSER_SCREENSHOT_TIMEOUT_MS: int = 20000
-    BROWSER_LOADING_TIMEOUT_MS: int = 60000
+    PAGE_READY_NETWORK_IDLE_TIMEOUT_MS: float = 2000  # Wait for network idle (short timeout)
+    PAGE_READY_LOADING_INDICATOR_TIMEOUT_MS: float = 3000  # Wait for loading indicators to disappear
+    PAGE_READY_DOM_STABLE_MS: float = 200  # Time with no DOM mutations to consider stable
+    PAGE_READY_DOM_STABILITY_TIMEOUT_MS: float = 1500  # Max time to wait for DOM stability
+    BROWSER_SCREENSHOT_TIMEOUT_MS: int = 15000
+    BROWSER_LOADING_TIMEOUT_MS: int = 30000
     BROWSER_SCRAPING_BUILDING_ELEMENT_TREE_TIMEOUT_MS: int = 60 * 1000  # 1 minute
     OPTION_LOADING_TIMEOUT_MS: int = 600000
-    MAX_STEPS_PER_RUN: int = 10
-    MAX_STEPS_PER_TASK_V2: int = 25
-    MAX_ITERATIONS_PER_TASK_V2: int = 10
+    MAX_STEPS_PER_RUN: int = 8
+    MAX_STEPS_PER_TASK_V2: int = 15
+    MAX_ITERATIONS_PER_TASK_V2: int = 8
     MAX_NUM_SCREENSHOTS: int = 10
     # Ratio should be between 0 and 1.
     # If the task has been running for more steps than this ratio of the max steps per run, then we'll log a warning.

@@ -1,12 +1,10 @@
-import { useEffect, useRef } from "react";
 import { getClient } from "@/api/AxiosClient";
 import { useCredentialGetter } from "@/hooks/useCredentialGetter";
-import { statusIsNotFinalized } from "@/routes/tasks/types";
 import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+  statusIsNotFinalized,
+  statusIsRunningOrQueued,
+} from "@/routes/tasks/types";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { WorkflowRunTimelineItem } from "../types/workflowRunTypes";
 import { useWorkflowRunWithWorkflowQuery } from "./useWorkflowRunWithWorkflowQuery";
 import { useGlobalWorkflowsQuery } from "./useGlobalWorkflowsQuery";
@@ -15,32 +13,17 @@ import { useFirstParam } from "@/hooks/useFirstParam";
 function useWorkflowRunTimelineQuery() {
   const workflowRunId = useFirstParam("workflowRunId", "runId");
   const credentialGetter = useCredentialGetter();
-  const queryClient = useQueryClient();
   const { data: globalWorkflows } = useGlobalWorkflowsQuery();
-  const { data: workflowRun, dataUpdatedAt } =
-    useWorkflowRunWithWorkflowQuery();
+  const { data: workflowRun } = useWorkflowRunWithWorkflowQuery();
   const workflow = workflowRun?.workflow;
   const workflowPermanentId = workflow?.workflow_permanent_id;
 
-  // Track when workflow run data was last updated
-  const prevDataUpdatedAtRef = useRef<number>(dataUpdatedAt);
-
-  // Refetch timeline whenever the workflow run query gets new data.
-  // This keeps the timeline perfectly synchronized with the workflow run status,
-  // ensuring we never miss updates (e.g., when workflow completes).
-  useEffect(() => {
-    if (
-      dataUpdatedAt !== prevDataUpdatedAtRef.current &&
-      workflowPermanentId &&
-      workflowRunId
-    ) {
-      queryClient.invalidateQueries({
-        queryKey: ["workflowRunTimeline", workflowPermanentId, workflowRunId],
-      });
-    }
-    prevDataUpdatedAtRef.current = dataUpdatedAt;
-  }, [dataUpdatedAt, workflowPermanentId, workflowRunId, queryClient]);
-
+  // Previously this hook invalidated the query via a useEffect on `dataUpdatedAt`.
+  // Because 11 components call this hook, 11 useEffects would fire invalidations in
+  // slightly different render cycles, producing 3+ concurrent network requests per
+  // refresh. The backend was serving three identical ~10s timeline queries in parallel.
+  // Native refetchInterval is owned by a single query instance, so react-query will
+  // only ever have one request in flight no matter how many components subscribe.
   return useQuery<Array<WorkflowRunTimelineItem>>({
     queryKey: ["workflowRunTimeline", workflowPermanentId, workflowRunId],
     queryFn: async () => {
@@ -59,8 +42,14 @@ function useWorkflowRunTimelineQuery() {
         )
         .then((response) => response.data);
     },
-    // No independent refetchInterval - timeline follows workflow run query's timing
-    // via the useEffect above that invalidates on dataUpdatedAt changes
+    refetchInterval: (query) => {
+      if (!query.state.data || !workflowRun) {
+        return false;
+      }
+      // Match the workflow run query's 5s cadence while the run is live.
+      return statusIsRunningOrQueued(workflowRun) ? 5000 : false;
+    },
+    refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
     refetchOnMount:
       workflowRun && statusIsNotFinalized(workflowRun) ? "always" : false,

@@ -18,15 +18,18 @@ services:
       timeout: 5s
       retries: 5
   skyvern:
-    image: public.ecr.aws/skyvern/skyvern:latest
+    build: .
+    image: skyvern-local:latest
     restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env
     # comment out if you want to externally call skyvern API
     ports:
       - 8000:8000
       - 6080:6080 # for VNC WebSocket streaming
-      - 9222:9222 # for cdp browser forwarding
+     # - 9222:9222 # for cdp browser forwarding
     volumes:
       - ./artifacts:/data/artifacts
       - ./videos:/data/videos
@@ -40,6 +43,8 @@ services:
       - DATABASE_STRING=postgresql+psycopg://skyvern:skyvern@postgres:5432/skyvern
       - BROWSER_TYPE=chromium-headful
       - ENABLE_CODE_BLOCK=true
+      - DEBUG_SESSION_TIMEOUT_MINUTES=1440
+      - DEBUG_SESSION_TIMEOUT_THRESHOLD_MINUTES=60
       # - BROWSER_TYPE=cdp-connect
       # Use this command to start Chrome with remote debugging:
       # "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\chrome-cdp-profile" --no-first-run --no-default-browser-check

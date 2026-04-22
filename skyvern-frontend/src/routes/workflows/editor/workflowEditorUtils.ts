@@ -1531,7 +1531,7 @@ function getElements(
     startNode(startNodeId, {
       withWorkflowSettings: true,
       persistBrowserSession: settings.persistBrowserSession,
-      proxyLocation: settings.proxyLocation ?? ProxyLocation.Residential,
+      proxyLocation: settings.proxyLocation ?? ProxyLocation.None,
       webhookCallbackUrl: settings.webhookCallbackUrl ?? "",
       model: settings.model,
       maxScreenshotScrolls: settings.maxScreenshotScrolls,
@@ -2806,7 +2806,7 @@ function getWorkflowBlocks(
 function getWorkflowSettings(nodes: Array<AppNode>): WorkflowSettings {
   const defaultSettings = {
     persistBrowserSession: false,
-    proxyLocation: ProxyLocation.Residential,
+    proxyLocation: ProxyLocation.None,
     webhookCallbackUrl: null,
     model: null,
     maxScreenshotScrolls: null,

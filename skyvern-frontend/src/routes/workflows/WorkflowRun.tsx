@@ -170,7 +170,7 @@ function WorkflowRun() {
   );
   const parameters = workflowRun?.parameters ?? {};
   const proxyLocation =
-    workflowRun?.proxy_location ?? ProxyLocation.Residential;
+    workflowRun?.proxy_location ?? ProxyLocation.None;
   const maxScreenshotScrolls = workflowRun?.max_screenshot_scrolls ?? null;
 
   const title = workflowRunIsLoading ? (

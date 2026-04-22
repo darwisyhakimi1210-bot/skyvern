@@ -336,16 +336,15 @@ async def scrape_web_unsafe(
         await empty_page_retry_wait()
         elements, element_tree = await get_interactable_element_tree(page, scrape_exclude, must_included_tags)
 
-    element_tree = await cleanup_element_tree(page, url, copy.deepcopy(element_tree))
-    element_tree_trimmed = trim_element_tree(copy.deepcopy(element_tree))
-
-    screenshots = []
+    screenshots: list[bytes] = []
     if take_screenshots:
-        element_tree_trimmed_html_str = "".join(
-            json_to_html(element, need_skyvern_attrs=False) for element in element_tree_trimmed
-        )
-        token_count = count_tokens(element_tree_trimmed_html_str)
-        if token_count > DEFAULT_MAX_TOKENS:
+        # Screenshot cap needs a token estimate up front. Use the uncleaned tree as an upper
+        # bound: cleanup only shrinks the tree (SVG subtrees collapse to an alt attribute), so
+        # if the uncleaned size is under the threshold the cleaned size is too. On pages that
+        # sit just above the threshold this over-caps to 1 screenshot; acceptable tradeoff for
+        # overlapping the two slow phases.
+        uncleaned_html_str = "".join(json_to_html(element, need_skyvern_attrs=False) for element in element_tree)
+        if count_tokens(uncleaned_html_str) > DEFAULT_MAX_TOKENS:
             max_screenshot_number = min(max_screenshot_number, 1)
 
         # get current x, y position of the page
@@ -357,18 +356,27 @@ async def scrape_web_unsafe(
         except Exception:
             LOG.warning("Failed to get current x, y position of the page", exc_info=True)
 
-        screenshots = await SkyvernFrame.take_split_screenshots(
+        # Parallelize the two slow phases of scraping. cleanup_element_tree drives SVG shape
+        # LLM calls (data-structure work); take_split_screenshots drives page scroll + render.
+        # They touch independent resources, so running them together cuts ~2-5s off each step.
+        cleanup_coro = cleanup_element_tree(page, url, copy.deepcopy(element_tree))
+        screenshot_coro = SkyvernFrame.take_split_screenshots(
             page=page,
             url=url,
             draw_boxes=draw_boxes,
             max_number=max_screenshot_number,
             scroll=scroll,
         )
+        element_tree, screenshots = await asyncio.gather(cleanup_coro, screenshot_coro)
 
         # scroll back to the original x, y position of the page
         if x is not None and y is not None:
             await skyvern_frame.safe_scroll_to_x_y(x, y)
             LOG.debug("Scrolled back to the original x, y position of the page after scraping", x=x, y=y)
+    else:
+        element_tree = await cleanup_element_tree(page, url, copy.deepcopy(element_tree))
+
+    element_tree_trimmed = trim_element_tree(copy.deepcopy(element_tree))
 
     id_to_css_dict, id_to_element_dict, id_to_frame_dict, id_to_element_hash, hash_to_element_ids = build_element_dict(
         elements

@@ -83,4 +83,4 @@ async def navigate_with_retry(
                 wait_until=strategy,
                 error=error_str,
             )
-            await sleep(1)
+            await sleep(0.5)

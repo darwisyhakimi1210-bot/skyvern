@@ -123,7 +123,7 @@ function PromptBox() {
     null,
   );
   const [proxyLocation, setProxyLocation] = useState<ProxyLocation>(
-    ProxyLocation.Residential,
+    ProxyLocation.None,
   );
   const [browserSessionId, setBrowserSessionId] = useState<string | null>(null);
   const [cdpAddress, setCdpAddress] = useState<string | null>(null);

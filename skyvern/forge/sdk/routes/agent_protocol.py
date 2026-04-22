@@ -393,6 +393,7 @@ async def run_workflow(
         browser_address=workflow_run_request.browser_address,
         run_with=workflow_run_request.run_with,
         ai_fallback=workflow_run_request.ai_fallback,
+        device_template=workflow_run_request.device_template,
     )
 
     try:

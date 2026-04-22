@@ -29,7 +29,7 @@ const defaultState: Omit<
   "setWorkflowSettings" | "resetWorkflowSettings"
 > = {
   webhookCallbackUrl: "",
-  proxyLocation: ProxyLocation.Residential,
+  proxyLocation: ProxyLocation.None,
   persistBrowserSession: false,
   model: null,
   maxScreenshotScrollingTimes: null,

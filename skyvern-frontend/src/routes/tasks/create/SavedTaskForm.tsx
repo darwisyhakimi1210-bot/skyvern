@@ -147,7 +147,7 @@ function SavedTaskForm({ initialValues }: Props) {
     defaultValues: {
       ...initialValues,
       maxStepsOverride: initialValues.maxStepsOverride ?? null,
-      proxyLocation: initialValues.proxyLocation ?? ProxyLocation.Residential,
+      proxyLocation: initialValues.proxyLocation ?? ProxyLocation.None,
     },
   });
 

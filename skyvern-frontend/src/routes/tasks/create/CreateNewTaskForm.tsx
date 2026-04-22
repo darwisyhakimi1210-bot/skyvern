@@ -88,7 +88,7 @@ function createTaskRequestObject(
     webhook_callback_url: transform(formValues.webhookCallbackUrl),
     navigation_goal: transform(formValues.navigationGoal),
     data_extraction_goal: transform(formValues.dataExtractionGoal),
-    proxy_location: formValues.proxyLocation ?? ProxyLocation.Residential,
+    proxy_location: formValues.proxyLocation ?? ProxyLocation.None,
     navigation_payload: transform(formValues.navigationPayload),
     extracted_information_schema: extractedInformationSchema,
     extra_http_headers: extraHttpHeaders,
@@ -129,7 +129,7 @@ function CreateNewTaskForm({ initialValues }: Props) {
     defaultValues: {
       ...initialValues,
       maxStepsOverride: initialValues.maxStepsOverride ?? null,
-      proxyLocation: initialValues.proxyLocation ?? ProxyLocation.Residential,
+      proxyLocation: initialValues.proxyLocation ?? ProxyLocation.None,
       maxScreenshotScrolls: initialValues.maxScreenshotScrolls ?? null,
       cdpAddress: initialValues.cdpAddress ?? null,
     },
